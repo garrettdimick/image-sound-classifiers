@@ -2,8 +2,8 @@
 import random
 import numpy as np
 import scipy as sp
-
-
+import sys
+import json
 #### Define the quadratic and cross-entropy cost functions
 
 class QuadraticCost(object):
@@ -98,6 +98,9 @@ class Network(object):
             monitor_evaluation_accuracy=False,
             monitor_training_cost=False,
             monitor_training_accuracy=False):
+        highestAcc = 0
+        consecutive_epochs = 0
+        orig_eta = eta
         if evaluation_data:
             n_data = len(evaluation_data)
         n = len(training_data)
@@ -111,7 +114,9 @@ class Network(object):
             for mini_batch in mini_batches:
                 self.update_mini_batch(
                     mini_batch, eta, lmbda, len(training_data))
-            #print "Epoch %s training complete" % j
+            print "Epoch %s training complete" % j
+            ## Save the network here so training can be stopped if necessary
+            self.save("/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project/networks/ImageANN.pck")
             if monitor_training_cost:
                 cost = self.total_cost(training_data, lmbda)
                 training_cost.append(cost)
@@ -129,8 +134,23 @@ class Network(object):
                 accuracy = self.accuracy(evaluation_data, convert=True)
                 evaluation_accuracy.append(accuracy)
                 # vladimir kulyukin: commented out
-                #print "Accuracy on evaluation data: {} / {}".format(
-                #    accuracy, n)
+                if(j >= 10):
+                    if (accuracy > highestAcc):
+                        highestAcc = accuracy
+                        consecutive_epochs = 0
+                    if (accuracy <= highestAcc):
+                        consecutive_epochs += 1
+                    ## if there is no improvement in 15 epochs, halve eta
+                    if (consecutive_epochs == 15):
+                        eta = (eta/2)
+                    ## if the original eta is 1/128th of the original, terminate
+                    if(eta < (orig_eta/128)):
+                        print "Accuracy on evaluation data: {} / {}".format(
+                           accuracy, len(evaluation_data))
+                        return evaluation_cost, evaluation_accuracy, \
+                            training_cost, training_accuracy
+                print "Accuracy on evaluation data: {} / {}".format(
+                   accuracy, len(evaluation_data))
             #print
         return evaluation_cost, evaluation_accuracy, \
             training_cost, training_accuracy
@@ -231,7 +251,7 @@ class Network(object):
         cost = 0.0
         for x, y in data:
             a = self.feedforward(x)
-            if convert: y = vectorized_result(y)
+            # if convert: y = vectorized_result(y)
             cost += self.cost.fn(a, y)/len(data)
         cost += 0.5*(lmbda/len(data))*sum(
             np.linalg.norm(w)**2 for w in self.weights)
@@ -247,10 +267,42 @@ class Network(object):
         json.dump(data, f)
         f.close()
 
-    def sigmoid(z):
-        """The sigmoid function."""
-        return 1.0/(1.0+np.exp(-z))
+def load(filename):
+    ## Load a neural network from the file ``filename``.  Returns an
+    ## instance of Network.
 
-    def sigmoid_prime(z):
-        """Derivative of the sigmoid function."""
-        return sigmoid(z)*(1-sigmoid(z))
+    f = open(filename, "r")
+    data = json.load(f)
+    f.close()
+    cost = getattr(sys.modules[__name__], data["cost"])
+    net = Network(data["sizes"], cost=cost)
+    net.weights = [np.array(w) for w in data["weights"]]
+    net.biases = [np.array(b) for b in data["biases"]]
+    return net
+
+def sigmoid(z):
+    """The sigmoid function."""
+    return 1.0/(1.0+np.exp(-z))
+
+def sigmoid_prime(z):
+    """Derivative of the sigmoid function."""
+    return sigmoid(z)*(1-sigmoid(z))
+
+def ternary_result(j):
+    """Return a 3-dimensional unit vector with a 1.0 in the j'th position
+    and zeroes elsewhere.  A 1.0 in the first position indicates a bee noise and
+    a 1.0 in the second position indicates a cricket noise while a 1.0 in the
+    third position indicates an ambient noise
+    """
+    e = np.zeros((3, 1))
+    e[j] = 1.0
+    return e
+
+def binary_result(j):
+    """Return a 2-dimensional unit vector with a 1.0 in the j'th position
+    and zeroes elsewhere.  A 1.0 in the first position indicates no_bee and
+    a 1.0 in the second position indicates yes_bee
+    """
+    e = np.zeros((2, 1))
+    e[j] = 1.0
+    return e
