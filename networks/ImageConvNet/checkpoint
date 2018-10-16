@@ -1,2 +1,2 @@
-model_checkpoint_path: "/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project/networks/ImageConvNet.pck"
-all_model_checkpoint_paths: "/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project/networks/ImageConvNet.pck"
+model_checkpoint_path: "/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project/networks/ImageConvNet/ImageConvNet.pck"
+all_model_checkpoint_paths: "/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project/networks/ImageConvNet/ImageConvNet.pck"
