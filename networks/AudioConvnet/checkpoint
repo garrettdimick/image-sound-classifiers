@@ -1,0 +1,2 @@
+model_checkpoint_path: "/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project/networks/AudioConvnet/AudioConvnet.tfl"
+all_model_checkpoint_paths: "/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project/networks/AudioConvnet/AudioConvnet.tfl"
