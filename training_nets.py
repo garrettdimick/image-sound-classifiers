@@ -6,6 +6,7 @@
 ## and one ANN and one Convnet for classifying Sounds
 ## Datasets were gathered by Professor Vladimir Kulyukin of Utah State University
 #################
+####train
 
 import cv2
 import numpy as np
@@ -71,9 +72,16 @@ def load_image_data():
     atd = [np.reshape(x[0], (1024, 1)) for x in ann_train_data]
     ard = [y[1] for y in ann_train_data]
     ## training data for ANN that will classify images
-    ann_image_train_data = zip(atd, ard)
+    # ann_image_train_data = zip(atd, ard)
+    ann_image_train_data = []
+    for i in xrange(len(atd)):
+        ann_image_train_data.append((atd[i], ard[i]))
+    # print type(ann_image_train_data)
+    # print type(ann_image_train_data[0])
+    # print
+    # print ann_image_train_data[0][0]
 
-    ann_image_train_data = shuffle(ann_image_train_data)
+    shuffle(ann_image_train_data)
     ## turn the convnet data into a usable format for tflearn stuff
     ## x is training data, y is labels
     x = [i[0] for i in convnet_train_pre_data]
@@ -111,7 +119,7 @@ def load_image_data():
     ann_test_d = [np.reshape(x[0], (1024, 1)) for x in ann_test_data]
     ann_res_d = [y[1] for y in ann_test_data]
     ann_image_testing_data = zip(ann_test_d, ann_res_d)
-    ann_image_testing_data = shuffle(ann_image_testing_data)
+    shuffle(ann_image_testing_data)
     ann_image_test_data = ann_image_testing_data[0:11000]
     ## eval data for ANN that will classify images
     ann_image_eval_data = ann_image_testing_data[11000:]
@@ -234,25 +242,25 @@ def load_sound_data():
 ## 4-ann_image_eval_data, 5-image_testX, 6-image_testY, 7-image_evalX, 8-image_evalY]
 image_ann = nw.Network([1024, 40, 20, 2])
 image_ann.save("/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project/networks/ImageANN.pck")
-def train_image_ann(file_path):
+def train_image_ann(filepath):
     ## use stochastic gradient descent to train the ANN
     ## 10 epochs, mbs=5, eta=0.1, lmbda=0.0
     data = load_image_data()
     ann_image_train_data = data[0]
-    ann_image_eval_data = data[4]
-    image_ann = nw.load(file_path)
+    ann_image_test_data = data[3]
+    image_ann = nw.load(filepath)
     num_epochs = 10
     mbs = 1
     eta = 0.1
     lmbda = 0.05
     ## Train the ANN using Stochastic Gradient descent
     image_ann.SGD2(ann_image_train_data, num_epochs, mbs, eta, lmbda,
-                            ann_image_eval_data,
+                            ann_image_test_data,
                             monitor_evaluation_cost=True,
                             monitor_evaluation_accuracy=True,
                             monitor_training_cost=True,
                             monitor_training_accuracy=True)
-    image_ann.save(file_path)
+    image_ann.save(filepath)
 
 ## [0-sound_train_data, 1-sound_test_data, 2-trainX, 3-trainY,
 ## 4-testX, 5-testY, 6-validX, 7-validY]
@@ -264,7 +272,7 @@ def train_sound_ann(filepath):
     data = load_sound_data()
     ann_audio_train_data = data[0]
     ann_audio_eval_data = data[1]
-    audio_ann = nw.load(file_path)
+    audio_ann = nw.load(filepath)
     num_epochs = 10
     mbs = 1
     eta = 0.1
@@ -276,7 +284,7 @@ def train_sound_ann(filepath):
                             monitor_evaluation_accuracy=True,
                             monitor_training_cost=True,
                             monitor_training_accuracy=True)
-    audio_ann.save(file_path)
+    audio_ann.save(filepath)
 
 def train_image_convnet(filepath):
     data = load_image_data()
@@ -296,21 +304,21 @@ def train_image_convnet(filepath):
     ## max pooling layer
     pool_layer = max_pool_2d(conv_layer, 2, name='pool_layer_1')
     ## convolutional layer
-    conv_layer_2 = conv_2d(pool_layer,
-                        nb_filter=64,
-                        filter_size=3,
-                        activation='relu',
-                        name='conv_layer_2')
-    ## convolutional layer
-    conv_layer_3 = conv_2d(conv_layer_2,
-                        nb_filter=64,
-                        filter_size=3,
-                        activation='relu',
-                        name='conv_layer_3')
-    ## max pooling layer, window of 2x2
-    pool_layer_2 = max_pool_2d(conv_layer_3, 2, name='pool_layer_2')
+    # conv_layer_2 = conv_2d(pool_layer,
+    #                     nb_filter=64,
+    #                     filter_size=3,
+    #                     activation='relu',
+    #                     name='conv_layer_2')
+    # ## convolutional layer
+    # conv_layer_3 = conv_2d(conv_layer_2,
+    #                     nb_filter=64,
+    #                     filter_size=3,
+    #                     activation='relu',
+    #                     name='conv_layer_3')
+    # ## max pooling layer, window of 2x2
+    # pool_layer_2 = max_pool_2d(conv_layer_3, 2, name='pool_layer_2')
     ## fully connected layer with 512 nodes, half of 32 x 32
-    fc_layer_1 = fully_connected(pool_layer_2, 512, activation='relu', name='fc_layer_1')
+    fc_layer_1 = fully_connected(pool_layer, 512, activation='relu', name='fc_layer_1')
     ## dropout layer
     dropout_layer = dropout(fc_layer_1, 0.5)
     ## fully connected with 2 layers, 0 is not a bee, 1 is a bee
@@ -392,7 +400,7 @@ def train_sound_convnet(filepath):
 # train_image_convnet("/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project/networks/ImageConvnet/ImageConvnet.tfl")
 
 ## Sound ANN
-# train_sound_ann("/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project/networks/AudioANN.pck")
+train_sound_ann("/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project/networks/AudioANN.pck")
 
 ## Sound Convnet
 # reset_default_graph()
