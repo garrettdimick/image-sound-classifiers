@@ -144,10 +144,11 @@ def load_image_data():
 ## now turn data into numpy arrays for sounds
 ## load_sound_data loads the sounds data and returns it as a list with the format:
 ## [0-sound_train_data, 1-sound_test_data, 2-trainX, 3-trainY,
-## 4-testX, 5-testY, 6-validX, 7-validY]
+## 4-testX, 5-testY, 6-validX, 7-validY, ann_audio_train_data, ann_audio_test_data]
 def load_sound_data():
     sound_t_data = []
     sound_train_data = []
+    ann_audio_train_data = []
     ## Process all the Bee Training sound data
     ## first add bee train sounds
     f = glob.glob("/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project_01_Data/BUZZ2Set/train/bee_train/*.wav")
@@ -169,7 +170,6 @@ def load_sound_data():
     cricket_train_data = zip(sound_t_data, y_train)
     for i in cricket_train_data:
         sound_train_data.append(i)
-
     ## now ambient Sounds
     sound_t_data = []
     f = glob.glob("/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project_01_Data/BUZZ2Set/train/noise_train/*.wav")
@@ -184,6 +184,7 @@ def load_sound_data():
     ## Now testing data for sounds
     sound_t_data = []
     sound_test_data = []
+    ann_audio_test_data = []
     f = glob.glob("/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project_01_Data/BUZZ2Set/test/bee_test/*.wav")
     for file in f:
         samplerate, audio = wavfile.read(file)
@@ -213,6 +214,30 @@ def load_sound_data():
     for i in noise_test_data:
         sound_test_data.append(i)
 
+    # print "The first element in sound_train_data is: "
+    # print sound_train_data[0]
+    # training_inputs = [np.reshape(x, (7921, 1)) for x in sound_train_data[x]]
+    # training_results = [y for y in sound_train_data[1]]
+    # audio_training_data = zip(training_inputs, training_results)
+    audio_training_data = []
+    for i in sound_train_data:
+        v = np.where(i[1]==1)[0][0]
+        audio_training_data.append((np.reshape(i[0], (7921, 1)), v))
+    shuffle(audio_training_data)
+
+    # testing_inputs = [np.reshape(x, (7921, 1)) for x in sound_test_data[x]]
+    # testing_results = [y for y in sound_test_data[1]]
+    # audio_testing_data = zip(testing_inputs, testing_results)
+    # audio_testing_data = shuffle(sound_test_data)
+    audio_testing_data = []
+    for i in sound_test_data:
+        v = np.where(i[1]==1)[0][0]
+        audio_testing_data.append((np.reshape(i[0], (7921, 1)), v))
+    shuffle(audio_testing_data)
+
+    valid_data = audio_testing_data[2100:]
+    audio_testing_data = audio_testing_data[0:2100]
+
     trainX = [i[0] for i in sound_train_data]
     trainX = np.array(trainX)
     trainX = trainX.reshape([-1, 89, 89, 1])
@@ -230,9 +255,9 @@ def load_sound_data():
     testY = testy[0:2100]
     validY = testy[2100:]
 
-    return [sound_train_data, sound_test_data, trainX, trainY, testX, testY, validX, validY]
+    return [sound_train_data, sound_test_data, trainX, trainY, testX, testY, validX, validY, audio_training_data, audio_testing_data, valid_data]
 ## Build an image classifying ANN
-## Architecture: 1024 x  x 2
+## Architecture: 1024 x 40 x 20 x 2
 ## 3 hidden layers
 ## initially create the ANN, after this comment this out and the train_image_ann()
 ## routine will take care of loading the ann and then persisting it in the same
@@ -240,19 +265,23 @@ def load_sound_data():
 
 ##[0-ann_image_train_data, 1-image_trainX, 2-image_trainY, 3-ann_image_test_data,
 ## 4-ann_image_eval_data, 5-image_testX, 6-image_testY, 7-image_evalX, 8-image_evalY]
-image_ann = nw.Network([1024, 40, 20, 2])
-image_ann.save("/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project/networks/ImageANN.pck")
+
+# image_ann.save("/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project/networks/ImageANN.pck")
+
 def train_image_ann(filepath):
     ## use stochastic gradient descent to train the ANN
-    ## 10 epochs, mbs=5, eta=0.1, lmbda=0.0
+    ## 100 epochs, mbs=10, eta=0.1, lmbda=0.0
+    ## change these values regularly as necessary
+    ## 1024 x 40 x 20 x 2
     data = load_image_data()
     ann_image_train_data = data[0]
     ann_image_test_data = data[3]
-    image_ann = nw.load(filepath)
-    num_epochs = 10
-    mbs = 1
+    image_ann = nw.Network([1024, 256, 40, 20, 2])
+    # image_ann = nw.load(filepath)
+    num_epochs = 50
+    mbs = 16
     eta = 0.1
-    lmbda = 0.05
+    lmbda = 0.0
     ## Train the ANN using Stochastic Gradient descent
     image_ann.SGD2(ann_image_train_data, num_epochs, mbs, eta, lmbda,
                             ann_image_test_data,
@@ -264,19 +293,22 @@ def train_image_ann(filepath):
 
 ## [0-sound_train_data, 1-sound_test_data, 2-trainX, 3-trainY,
 ## 4-testX, 5-testY, 6-validX, 7-validY]
-audio_ann = nw.Network([7921, 387, 60, 15, 3])
-audio_ann.save("/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project/networks/AudioANN.pck")
+
+
+# audio_ann.save("/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project/networks/AudioANN.pck")
 def train_sound_ann(filepath):
     ## use stochastic gradient descent to train the ANN
-    ## 10 epochs, mbs=5, eta=0.1, lmbda=0.0
+    ## epochs, mbs=5, eta=0.1, lmbda=0.0
+    ## change these values to train the network
     data = load_sound_data()
-    ann_audio_train_data = data[0]
-    ann_audio_eval_data = data[1]
-    audio_ann = nw.load(filepath)
-    num_epochs = 10
-    mbs = 1
+    audio_ann = nw.Network([7921, 387, 60, 15, 3])
+    ann_audio_train_data = data[8]
+    ann_audio_eval_data = data[9]
+    # audio_ann = nw.load(filepath)
+    num_epochs = 50
+    mbs = 10
     eta = 0.1
-    lmbda = 0.05
+    lmbda = 0.0
     ## Train the ANN using Stochastic Gradient descent
     audio_ann.SGD2(ann_audio_train_data, num_epochs, mbs, eta, lmbda,
                             ann_audio_eval_data,
@@ -385,6 +417,51 @@ def train_sound_convnet(filepath):
                 run_id='audio_convnet')
     model.save(filepath)
 
+def retrain_sound_convnet(filepath):
+    data = load_sound_data()
+    trainX = data[2]
+    trainY = data[3]
+    testX = data[4]
+    testY = data[5]
+
+    ## design the network
+    ## input is a 89 x 89 nparray reshaped from the original 1 x 7921
+    ## with the audio information
+    input_layer = input_data(shape=[None, 89, 89, 1])
+    ## convolutional layer
+    conv_layer = conv_2d(input_layer,
+                        nb_filter=32,
+                        filter_size=2,
+                        activation='sigmoid',
+                        name='conv_layer_1')
+    ## max pooling layer, window of 2x2
+    pool_layer = max_pool_2d(conv_layer, 2, name='pool_layer_2')
+    ## dropout layer
+    dropout_layer = dropout(pool_layer, 0.25)
+    flat_layer = flatten(dropout_layer, name="flatten_layer")
+    ## fully connected layer with 128
+    fc_layer_1 = fully_connected(flat_layer, 256, activation='relu', name='fc_layer_1')
+    ## dropout layer
+    dropout_layer_1 = dropout(fc_layer_1, 0.25)
+    ## fully connected with 3 layers, 0 is bee, 1 is cricket, 2 is ambient
+    fc_layer_2 = fully_connected(dropout_layer_1, 3, activation='softmax', name='fc_layer_2')
+    ## network is trained with sgd, categorical cross entropy loss function, and eta = 0.01
+    network = regression(fc_layer_2, optimizer='sgd',
+                        loss='categorical_crossentropy', learning_rate=0.01)
+    ## turn the network into a model
+    model = tflearn.DNN(network)
+    model.load(filepath)
+    ## now do the training on the network
+    NUM_EPOCHS = 150
+    BATCH_SIZE = 1
+    model.fit(trainX, trainY, n_epoch=NUM_EPOCHS,
+                shuffle=True,
+                validation_set=(testX, testY),
+                show_metric=True,
+                batch_size = BATCH_SIZE,
+                run_id='audio_convnet')
+    model.save(filepath)
+
 ### Load the data using these functions, each train function calls these, so
 ## it is only necessary if you want to see the data for some other reason
 # load_image_data()
@@ -394,14 +471,14 @@ def train_sound_convnet(filepath):
 ## Train the networks
 ## Image ANN
 # train_image_ann("/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project/networks/ImageANN.pck")
-
 ## Image Convnet
 # reset_default_graph()
-# train_image_convnet("/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project/networks/ImageConvnet/ImageConvnet.tfl")
+# train_image_convnet(file to image conv)
 
 ## Sound ANN
-train_sound_ann("/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project/networks/AudioANN.pck")
+# train_sound_ann("/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project/networks/AudioANN.pck")
 
 ## Sound Convnet
 # reset_default_graph()
-# train_sound_convnet("/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project/networks/AudioConvnet/AudioConvnet.tfl")
+# train_sound_convnet(file to audio conv)
+# retrain_sound_convnet(file to audio conv)

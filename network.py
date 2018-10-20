@@ -116,7 +116,6 @@ class Network(object):
                     mini_batch, eta, lmbda, len(training_data))
             print "Epoch %s training complete" % j
             ## Save the network here so training can be stopped if necessary
-            self.save("/Users/garrettdimick/Google Drive/Fall 2018/CS5600-AI/Project/networks/ImageANN.pck")
             if monitor_training_cost:
                 cost = self.total_cost(training_data, lmbda)
                 training_cost.append(cost)
@@ -251,7 +250,7 @@ class Network(object):
         cost = 0.0
         for x, y in data:
             a = self.feedforward(x)
-            if convert: y = binary_result(y)
+            # if convert: y = ternary_result(y)
             cost += self.cost.fn(a, y)/len(data)
         cost += 0.5*(lmbda/len(data))*sum(
             np.linalg.norm(w)**2 for w in self.weights)
